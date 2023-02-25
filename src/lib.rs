@@ -53,6 +53,8 @@ pub fn create_without_id(input: TokenStream) -> TokenStream {
         .unzip();
 
     let mut filtered_field_declarations = TokenStream2::default();
+    let mut into_field_declaration = TokenStream2::default();
+    let mut into_ref_field_declaration = TokenStream2::default();
 
     idents
         .into_iter()
@@ -63,6 +65,9 @@ pub fn create_without_id(input: TokenStream) -> TokenStream {
             }
 
             filtered_field_declarations.extend::<TokenStream2>(quote! { pub #field : #ftype, });
+            into_field_declaration.extend::<TokenStream2>(quote! { #field : self.#field, });
+            into_ref_field_declaration
+                .extend::<TokenStream2>(quote! { #field : self.#field.clone(), });
         });
 
     let struct_name = Ident::new(&format!("{}WithoutId", ident), Span::call_site());
@@ -78,6 +83,19 @@ pub fn create_without_id(input: TokenStream) -> TokenStream {
         #changeset_options_attr
         pub struct #struct_name {
             #filtered_field_declarations
+        } impl Into<#struct_name> for #ident {
+            fn into(self) -> #ident {
+                #ident {
+                    #id_name: None,
+                    #into_field_declaration
+                }
+            }
+        } impl Into<#struct_name> for &#ident {
+            fn into(self) -> #struct_name {
+                #struct_name {
+                    #into_ref_field_declaration
+                }
+            }
         }
     };
 
