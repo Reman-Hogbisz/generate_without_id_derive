@@ -84,9 +84,8 @@ pub fn create_without_id(input: TokenStream) -> TokenStream {
         pub struct #struct_name {
             #filtered_field_declarations
         } impl Into<#struct_name> for #ident {
-            fn into(self) -> #ident {
-                #ident {
-                    #id_name: None,
+            fn into(self) -> #struct_name {
+                #struct_name {
                     #into_field_declaration
                 }
             }
