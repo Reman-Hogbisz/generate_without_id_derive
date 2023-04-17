@@ -77,7 +77,6 @@ pub fn create_without_id(input: TokenStream) -> TokenStream {
         use crate::util::*;
         use crate::db_connection::*;
         use diesel::prelude::*;
-        use ts_rs::TS;
 
         #[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Insertable, AsChangeset, TS)]
         #[ts(export)]
