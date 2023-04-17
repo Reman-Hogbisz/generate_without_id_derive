@@ -77,8 +77,10 @@ pub fn create_without_id(input: TokenStream) -> TokenStream {
         use crate::util::*;
         use crate::db_connection::*;
         use diesel::prelude::*;
+        use ts_rs::TS;
 
-        #[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Insertable, AsChangeset)]
+        #[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Insertable, AsChangeset, TS)]
+        #[ts(export)]
         #table_name_attr
         #changeset_options_attr
         pub struct #struct_name {
