@@ -4,7 +4,7 @@ use proc_macro2::{Ident, Span};
 use quote::{quote, ToTokens};
 use syn::{parse_macro_input, DeriveInput, FieldsNamed};
 
-#[proc_macro_derive(CreateWithoutId, attributes(id_name, diesel))]
+#[proc_macro_derive(CreateWithoutId, attributes(id_name, diesel, without_id_ts_type))]
 pub fn create_without_id(input: TokenStream) -> TokenStream {
     let DeriveInput {
         ident, data, attrs, ..
@@ -55,10 +55,10 @@ pub fn create_without_id(input: TokenStream) -> TokenStream {
         _ => panic!("derive(CreateFilter) only supports named fields"),
     };
 
-    let (idents, types): (Vec<_>, Vec<_>) = fields
+    let fields: Vec<_> = fields
         .iter()
         .filter_map(|f| match f.ident {
-            Some(ref i) => Some((i, &f.ty)),
+            Some(ref i) => Some((i, &f.ty, &f.attrs)),
             None => None,
         })
         .unzip();
@@ -67,19 +67,39 @@ pub fn create_without_id(input: TokenStream) -> TokenStream {
     let mut into_field_declaration = TokenStream2::default();
     let mut into_ref_field_declaration = TokenStream2::default();
 
-    idents
-        .into_iter()
-        .zip(types.into_iter())
-        .for_each(|(field, ftype)| {
-            if field.to_string() == id_name {
-                return;
-            }
+    fields.into_iter().for_each(|(field, ftype, attrs)| {
+        if field.to_string() == id_name {
+            return;
+        }
 
-            filtered_field_declarations.extend::<TokenStream2>(quote! { pub #field : #ftype, });
-            into_field_declaration.extend::<TokenStream2>(quote! { #field : self.#field, });
-            into_ref_field_declaration
-                .extend::<TokenStream2>(quote! { #field : self.#field.clone(), });
-        });
+        if let Some(attr) = attrs
+            .iter()
+            .find(|attr| attr.path.is_ident("without_id_ts_type"))
+        {
+            let ts_type = match attr.parse_args() {
+                Ok(Meta::NameValue(nv)) => {
+                    if nv.path.is_ident("type") {
+                        nv.lit
+                    } else {
+                        panic!("without_id_ts_type must be type = \"...\"")
+                    }
+                }
+                _ => panic!("without_id_ts_type must be type = \"...\""),
+            };
+
+            filtered_field_declarations.extend(quote! {
+                #[ts(type = #ts_type)]
+                pub #field: Option<#ftype>,
+            });
+        } else {
+            filtered_field_declarations.extend(quote! {
+                pub #field: Option<#ftype>,
+            });
+        }
+
+        into_field_declaration.extend::<TokenStream2>(quote! { #field : self.#field, });
+        into_ref_field_declaration.extend::<TokenStream2>(quote! { #field : self.#field.clone(), });
+    });
 
     let struct_name = Ident::new(&format!("{}WithoutId", ident), Span::call_site());
 
