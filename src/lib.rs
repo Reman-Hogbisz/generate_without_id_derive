@@ -4,7 +4,10 @@ use proc_macro2::{Ident, Span};
 use quote::{quote, ToTokens};
 use syn::{parse_macro_input, DeriveInput, FieldsNamed};
 
-#[proc_macro_derive(CreateWithoutId, attributes(changeset_options, id_name, table_name))]
+#[proc_macro_derive(
+    CreateWithoutId,
+    attributes(changeset_options, id_name, table_name, without_id_ts_type)
+)]
 pub fn create_without_id(input: TokenStream) -> TokenStream {
     let DeriveInput {
         ident, data, attrs, ..
@@ -64,7 +67,31 @@ pub fn create_without_id(input: TokenStream) -> TokenStream {
                 return;
             }
 
-            filtered_field_declarations.extend::<TokenStream2>(quote! { pub #field : #ftype, });
+            if let Some(attr) = attrs
+                .iter()
+                .find(|attr| attr.path.is_ident("without_id_ts_type"))
+            {
+                let ts_type = match attr.parse_args() {
+                    Ok(Meta::NameValue(nv)) => {
+                        if nv.path.is_ident("type") {
+                            nv.lit
+                        } else {
+                            panic!("without_id_ts_type must be type = \"...\"")
+                        }
+                    }
+                    _ => panic!("without_id_ts_type must be type = \"...\""),
+                };
+
+                filtered_field_declarations.extend(quote! {
+                    #[ts(type = #ts_type)]
+                    pub #field: #ftype,
+                });
+            } else {
+                filtered_field_declarations.extend(quote! {
+                    pub #field: #ftype,
+                });
+            }
+
             into_field_declaration.extend::<TokenStream2>(quote! { #field : self.#field, });
             into_ref_field_declaration
                 .extend::<TokenStream2>(quote! { #field : self.#field.clone(), });
