@@ -53,7 +53,7 @@ pub fn create_without_id(input: TokenStream) -> TokenStream {
             Some(ref i) => Some((i, &f.ty, &f.attrs)),
             None => None,
         })
-        .unzip();
+        .collect();
 
     let mut filtered_field_declarations = TokenStream2::default();
     let mut into_field_declaration = TokenStream2::default();
