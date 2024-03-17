@@ -2,7 +2,7 @@ use proc_macro::{self, TokenStream};
 use proc_macro2::TokenStream as TokenStream2;
 use proc_macro2::{Ident, Span};
 use quote::{quote, ToTokens};
-use syn::{parse_macro_input, DeriveInput, FieldsNamed};
+use syn::{parse_macro_input, DeriveInput, FieldsNamed, Meta};
 
 #[proc_macro_derive(CreateWithoutId, attributes(id_name, diesel, without_id_ts_type))]
 pub fn create_without_id(input: TokenStream) -> TokenStream {
